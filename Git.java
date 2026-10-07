@@ -26,13 +26,12 @@ public class Git {
             System.out.println("-- Blob creation --");
             repo.createBlob("Hello.txt");
             repo.addFileEntry("Hello.txt");
+            repo.createBlob("file1.txt");
+            repo.addFileEntry("file1.txt");
 
         } catch (IOException e) {
             System.out.println("SHA-1 is not available " + e);
         }
-
-        
-        
 
     }
 
@@ -90,7 +89,6 @@ public class Git {
             if (!git.mkdir()) {
                 counter++;
             }
-   
 
             objects = new File(git, "objects/");
             if (!objects.mkdir()) {
@@ -101,7 +99,6 @@ public class Git {
             if (!index.createNewFile()) {
                 counter++;
             }
-
 
             head = new File(git, "HEAD");
             if (!head.createNewFile()) {
@@ -117,9 +114,8 @@ public class Git {
         } catch (IOException e) {
             System.out.println("File error: " + e.getMessage());
 
-
         }
-    
+
     }
 
     public static String hashFile(String filePath) throws IOException {
@@ -133,7 +129,7 @@ public class Git {
         byte[] fileBytes = Files.readAllBytes(path);
 
         MessageDigest digest;
-        
+
         try {
             digest = MessageDigest.getInstance("SHA-1");
         } catch (NoSuchAlgorithmException e) {
@@ -143,34 +139,33 @@ public class Git {
         byte[] hash = digest.digest(fileBytes);
 
         return HexFormat.of().formatHex(hash);
-   
+
     }
 
     public void createBlob(String takenFile) throws IOException {
-        
+
         String fileHash = hashFile(takenFile);
 
         File newFile = new File(objects, fileHash);
         newFile.createNewFile();
 
-
         BufferedReader fileReader = new BufferedReader(new FileReader(takenFile));
-        String fileContents = fileReader.readLine();
-        fileReader.close();
-        
         FileWriter writeFile = new FileWriter(newFile.toPath().toString());
-        writeFile.write(fileContents + "\n");
+        String fileContents = "";
+        while ((fileContents = fileReader.readLine()) != null) {
+            writeFile.write(fileContents + "\n");
+        }
+        fileReader.close();
         writeFile.close();
 
     }
 
-    public void addFileEntry(String takenFile) throws IOException{
+    public void addFileEntry(String takenFile) throws IOException {
 
         String fileHash = hashFile(takenFile);
 
         BufferedReader fileReader = new BufferedReader(new FileReader(index));
-  
-        
+
         FileWriter writeFile = new FileWriter(index);
 
         if (fileReader.readLine() == null) {
@@ -178,7 +173,7 @@ public class Git {
         } else {
             writeFile.write("\n" + fileHash + " " + takenFile);
         }
-        
+
         fileReader.close();
         writeFile.close();
 
