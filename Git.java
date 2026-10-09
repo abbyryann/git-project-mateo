@@ -166,15 +166,17 @@ public class Git {
 
         BufferedReader fileReader = new BufferedReader(new FileReader(index));
 
-        FileWriter writeFile = new FileWriter(index);
+        String firstLine = fileReader.readLine();
+        fileReader.close();
 
-        if (fileReader.readLine() == null) {
+        FileWriter writeFile = new FileWriter(index, true);
+
+        if (firstLine == null) {
             writeFile.write(fileHash + " " + takenFile);
         } else {
             writeFile.write("\n" + fileHash + " " + takenFile);
         }
 
-        fileReader.close();
         writeFile.close();
 
     }
