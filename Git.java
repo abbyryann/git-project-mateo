@@ -32,6 +32,29 @@ public class Git {
         } catch (IOException e) {
             System.out.println("SHA-1 is not available " + e);
         }
+        String[] workingList = {
+                "blob 0a4d55a8d778e5022fab701977c5d840bbc486d0 myProgram/docs/Hello.txt",
+                "blob 483b5e082cf5502b303ba3dd4f3469a49fd3421f myProgram/docs/World.txt",
+                "blob 4377a91cdfd44db9a9bbf056849c7da0fc6cc7be myProgram/README.md"
+        };
+
+        System.out.println("-- Tree creation --");
+        String first = "";
+        try {
+            first = repo.createTree(workingList, "myProgram/docs");
+        } catch (IOException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+        String second = "";
+        try {
+            second = repo.createTree(workingList, "myProgram/docs");
+        } catch (IOException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+        System.out.println(first);
+        System.out.println(first.equals(second));
 
     }
 
@@ -167,6 +190,13 @@ public class Git {
         BufferedReader fileReader = new BufferedReader(new FileReader(index));
 
         String firstLine = fileReader.readLine();
+        String line = firstLine;
+        while (line != null) {
+            if (line.endsWith(takenFile)) {
+                fileReader.close();
+            }
+            line = fileReader.readLine();
+        }
         fileReader.close();
 
         FileWriter writeFile = new FileWriter(index, true);
@@ -178,6 +208,31 @@ public class Git {
         }
 
         writeFile.close();
+
+    }
+
+    public String createTree(String[] workingList, String dirPath) throws IOException {
+        String start = dirPath + "/";
+        String content = "";
+        for (int i = 0; i < workingList.length; i++) {
+            if (workingList[i] == null) {
+                i++;
+            }
+            String path = workingList[i].substring(46);
+            if (path.startsWith(start)) {
+                String hash = workingList[i].substring(0, 46);
+                String name = path.substring(start.length());
+                content += hash + name + "\n";
+            }
+        }
+        File tempFile = new File("temp");
+        tempFile.createNewFile();
+        FileWriter tempWriter = new FileWriter(tempFile);
+        tempWriter.write(content);
+        tempWriter.close();
+        createBlob(tempFile.getPath());
+        String treeHash = hashFile(tempFile.getPath());
+        return treeHash;
 
     }
 
