@@ -5,7 +5,9 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
 import java.util.HexFormat;
+import java.util.List;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
@@ -35,7 +37,6 @@ public class Git {
         String[] workingList = {
                 "blob 0a4d55a8d778e5022fab701977c5d840bbc486d0 myProgram/docs/Hello.txt",
                 "blob 483b5e082cf5502b303ba3dd4f3469a49fd3421f myProgram/docs/World.txt",
-                "blob 4377a91cdfd44db9a9bbf056849c7da0fc6cc7be myProgram/README.md"
         };
 
         System.out.println("-- Tree creation --");
@@ -225,15 +226,101 @@ public class Git {
                 content += hash + name + "\n";
             }
         }
-        File tempFile = new File("temp");
+        File tempFile = new File("cur");
         tempFile.createNewFile();
-        FileWriter tempWriter = new FileWriter(tempFile);
-        tempWriter.write(content);
-        tempWriter.close();
+        FileWriter curFile = new FileWriter(tempFile);
+        curFile.write(content);
+        curFile.close();
         createBlob(tempFile.getPath());
         String treeHash = hashFile(tempFile.getPath());
         return treeHash;
 
+    }
+
+    // chekc / and then alphebetical
+    public static String[] redoList(String[] workingList) {
+        for (int i = 0; i < workingList.length; i++) {
+            if (!workingList[i].substring(0, 5).equals("blob ") && !workingList[i].substring(0, 5).equals("tree ")) {
+                workingList[i] = "blob " + workingList[i];
+            }
+        }
+        for (int i = 0; i < workingList.length; i++) {
+            for (int j = i + 1; j < workingList.length; j++) {
+                String first = workingList[i].substring(46);
+                String second = workingList[j].substring(46);
+                if (countSlashes(first) < countSlashes(second)) {
+                    String temp = workingList[i];
+                    workingList[i] = workingList[j];
+                    workingList[j] = temp;
+                } else if (countSlashes(first) == countSlashes(second)) {
+                    if (first.compareTo(second) > 0) {
+                        String temp = workingList[i];
+                        workingList[i] = workingList[j];
+                        workingList[j] = temp;
+                    }
+                }
+            }
+        }
+        return workingList;
+    }
+
+    public static int countSlashes(String path) {
+        int count = 0;
+        for (int i = 0; i < path.length(); i++) {
+            if (path.charAt(i) == '/') {
+                count++;
+            }
+        }
+        return count;
+    }
+
+    public String[] getLeafRoot(String[] workingList) throws IOException {
+        workingList = redoList(workingList);
+        String path = workingList[0].substring(46);
+        int count = countSlashes(path);
+        int other = 0;
+        String directory = "";
+        for (int i = 0; i < path.length(); i++) {
+            if (path.charAt(i) == '/') {
+                other++;
+                if (count == other) {
+                    directory = path.substring(0, i);
+                }
+            }
+
+        }
+        String treeHash = createTree(workingList, directory);
+        return collapseWorkingList(workingList, directory, treeHash);
+    }
+
+    public static String[] collapseWorkingList(String[] workingList, String directory, String treeHash) {
+        String prefix = directory + '/';
+        int alrExist = 0;
+        for (int i = 0; i < workingList.length; i++) {
+            String path = workingList[i].substring(46);
+            if (path.startsWith(prefix)) {
+                alrExist++;
+            }
+        }
+        String[] newList = new String[workingList.length - alrExist + 1];
+        int cur = 0;
+        for (int i = 0; i < workingList.length; i++) {
+            String path = workingList[i].substring(46);
+            if (!path.startsWith(prefix)) {
+                newList[cur] = workingList[i];
+                cur++;
+            }
+        }
+        newList[cur] = "tree " + treeHash + " " + directory;
+        return redoList(newList);
+    }
+
+    public String createFinalTree(String[] workingList) throws IOException {
+        workingList = redoList(workingList);
+        while (workingList.length > 1) {
+            workingList = getLeafRoot(workingList);
+        }
+        return workingList[0].substring(5, 45);
     }
 
 }
